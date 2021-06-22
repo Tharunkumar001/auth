@@ -3,7 +3,7 @@ const graphql = require("graphql")
 
 const { GraphQLObjectType, GraphQLString, GraphQLSchema } = graphql;
 
-const __ = require("./Modal/modalSchema");
+const __ = require("../Modal/modalSchema");
 
 const jwt = require("jsonwebtoken");
 
