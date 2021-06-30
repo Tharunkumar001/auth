@@ -9,9 +9,7 @@ const authSchema = new mongoose.Schema({
         type: String
     },
 
-    phone: {
-        type: String
-    },
+
 })
 
 var Auth = mongoose.model("auth", authSchema);

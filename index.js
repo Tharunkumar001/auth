@@ -2,16 +2,23 @@ const express = require("express");
 const app = express();
 const cors = require("cors")
 
+const { ApolloServer , gql, withFilter} = require("apollo-server-express")
 const { graphqlHTTP } = require("express-graphql");
 const jwt = require("jsonwebtoken");
+
+const {createServer} = require("http");
+
+
+const PORT = 4000;
 
 const dotenv = require("dotenv");
 dotenv.config();
 
-const schema = require("./GQL/Auth");
-const router = require("./Rest/router")
+const bodyParser = require("body-parser")
+const User = require("./Modal/modalSchema")
 
-const __ = require("./Modal/modalSchema")
+
+
 var mongoose = require("mongoose");
 
 mongoose.connect(process.env.API_URL, { useNewUrlParser: true, useUnifiedTopology: true }, function() {
@@ -20,55 +27,32 @@ mongoose.connect(process.env.API_URL, { useNewUrlParser: true, useUnifiedTopolog
 
 app.use(cors({ credentials: true, origin: "*" }))
 
+app.use(bodyParser.json())
+app.use(bodyParser.urlencoded({ extended: true }));
+app.use(bodyParser.urlencoded({ extended: true }));
 
+// const { typeDefs, resolvers } = require("./GQL/isAuth")
 
-app.use("/graphql", graphqlHTTP({
-    schema,
-    graphiql: true
-}));
+const {resolvers} = require("./GQL/resolver");
+const {typeDefs} = require("./GQL/typeDefs");
 
-app.get("/signin", (req, res) => {
-    const foundUser = __.findOne({ "password": req.body.password }).then((done) => {
-        if (done.email) {
-            res.status(200).send(done.email);
-
-        } else {
-            __.create({
-
-                    name: req.body.name,
-                    email: req.body.email,
-                    password: req.body.password,
-                },
-
-                function(err, user) {
-                    if (err) return res.status(500).send("issues to registering a user");
-
-                    const token = jwt.sign({ id: user._id }, process.env.SECRET, { expiresIn: '1d' });
-
-                    res.status(200).send({ auth: true, token: token });
-                })
-        }
-    })
-
+const server = new ApolloServer({
+    typeDefs,
+    resolvers,
+    playground:{
+        endpoint: "http://localhost:4000/graphql"
+    }
+  
 })
 
-
-app.get("/login", (req, res) => {
-    var token = req.body.jwt;
-
-    if (!token) return res.status(401).send({ auth: false, message: 'No token provided.' });
-
-    jwt.verify(token, process.env.SECRET, (err, decoded) => {
-        if (err) return res.status(500).send({ auth: false, message: 'Failed to authenticate token.' });
+server.applyMiddleware({ app });
 
 
-        const foundUser = User.findOne({ "_id": decoded.id }).then((result) => {
-            res.send(result.email)
-        })
+const ws = createServer(app);
+server.installSubscriptionHandlers(ws);
 
-    })
-})
+ws.listen(PORT, () => {
+    console.log(`grahql api url at ${PORT}`);
+    console.log(`grahql subscription url at ${PORT}`)
 
-app.listen(process.env.PORT, () => {
-    console.log(`server focusing on port ${process.env.PORT}`)
 });
